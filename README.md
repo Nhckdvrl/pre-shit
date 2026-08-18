@@ -48,9 +48,16 @@ uv venv env && VIRTUAL_ENV=env uv pip install -r requirements.txt
 ./env/bin/python code/analyze.py --phase 0
 ```
 
-## Status
+## Status: killed at Phase 1
 
-See `docs/` — one report per gate, written as each gate is reached.
+The effect is robustly present (K0/K1: 10/10 seeds, all four stimulus sets), but
+commitment and recovery are **not** separately acquired. `R = B/C` is flat from
+the moment commitment appears; the median recovery improvement is negative on
+both constructions, and 0/10 and 1/10 seeds respectively met the pre-registered
+30% bar. K2 and K4 fail, so K5 fails and the study stops here.
+
+See `docs/VERDICT.md` for the full reasoning, `docs/PHASE0_K0_K1.md` and
+`docs/PHASE1_K2_K5.md` for the gate reports.
 
 ## What is and is not in this repository
 

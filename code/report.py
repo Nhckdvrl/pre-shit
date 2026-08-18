@@ -124,6 +124,25 @@ def phase1(items, n_boot=10000):
       "2x2 interaction. `R = B/C` is what a mature reanalyser drives toward 0: it is "
       "large when a garden path keeps costing surprisal after the evidence has arrived.\n")
 
+    A("\n## Does the recovery window have any dynamic range?\n")
+    A("A null recovery result is only informative if post-disambiguator spillover is "
+      "measurable in the first place. Per-position interaction at `step143000`, pooled "
+      "over seeds, item-level bootstrap (`*` = 95% CI excludes 0):\n")
+    A("| suite | C | G1 | G2 | G3 |")
+    A("|---|---|---|---|---|")
+    for suite in SG_SUITES:
+        sub = items[(items.suite == suite) & (items["mode"] == "full") & (items.step == 143000)]
+        cells = []
+        for col in ["C", "G1", "G2", "G3"]:
+            v = sub[col].dropna().values
+            m, lo, hi = paired_bootstrap_mean(v, 5000)
+            cells.append(f"{m:.2f}{'*' if lo > 0 else ''}")
+        A(f"| {SUITE_LABEL[suite]} | " + " | ".join(cells) + " |")
+    A("")
+    A("Spillover at the first post-disambiguator word is real and reliably positive, "
+      "but it is only a few percent of the disruption at the disambiguator itself. "
+      "The measure is not degenerate: it has range, and the range is small.\n")
+
     verdict = {}
     for suite in SG_SUITES:
         seeds, itemlist, C, B = build_arrays(items, suite, "full")
@@ -148,17 +167,29 @@ def phase1(items, n_boot=10000):
           f"**{n_imp}/{len(obs)}**. Seeds with `T_recover > T_commit`: **{n_later}/{len(obs)}**.\n")
         A("\n### Hierarchical bootstrap "
           f"({n_boot:,} draws: resample seeds, then items within each resampled seed)\n")
-        A("| quantity | median | 95% CI |")
-        A("|---|---|---|")
+        A("| quantity | median | 95% CI | draws where defined |")
+        A("|---|---|---|---|")
         for k, lab, f in [("improvement", "recovery improvement (early→late)", "{:.1%}"),
                           ("D", "D = log2(T_recover / T_commit)", "{:.2f}"),
                           ("T_commit", "T_commit (steps)", "{:,.0f}"),
                           ("T_recover", "T_recover (steps)", "{:,.0f}")]:
             m, lo, hi, frac = boot[k]
             if not np.isfinite(m):
-                A(f"| {lab} | — | — |")
+                A(f"| {lab} | — | — | {frac:.1%} |")
             else:
-                A(f"| {lab} | {f.format(m)} | [{f.format(lo)}, {f.format(hi)}] |")
+                A(f"| {lab} | {f.format(m)} | [{f.format(lo)}, {f.format(hi)}] | {frac:.1%} |")
+        d_frac = boot["D"][3]
+        k2_here = bool(np.isfinite(boot["improvement"][0])
+                       and boot["improvement"][0] >= RECOVERY_IMPROVEMENT_MIN
+                       and boot["improvement"][1] > 0)
+        if d_frac < 0.9 or not k2_here:
+            A("")
+            A(f"> `D` and `T_recover` are undefined in {1-d_frac:.0%} of draws, because "
+              f"in those draws no checkpoint ever cleared the 30% recovery-improvement "
+              f"requirement. The `D` row above is therefore conditioned on the minority "
+              f"of resamples in which a recovery time existed at all, and must not be "
+              f"read as evidence of separation. K3 is reported for completeness but is "
+              f"**void once K2 fails**.")
         k2 = bool(np.isfinite(boot["improvement"][0])
                   and boot["improvement"][0] >= RECOVERY_IMPROVEMENT_MIN
                   and boot["improvement"][1] > 0)
@@ -179,7 +210,7 @@ def phase1(items, n_boot=10000):
     if not k5:
         A("Under the pre-registration this is where the developmental-dissociation "
           "story stops. The failing gate is reported as-is; no control is added to "
-          "rescue it, and no interpretability work follows.")
+          "rescue it, and no interpretability work follows. Phases 2 and 3 are not run.")
     else:
         A("Proceed to Phase 2: the local-4-word baseline (K7) and the two external "
           "stimulus sets (K6).")

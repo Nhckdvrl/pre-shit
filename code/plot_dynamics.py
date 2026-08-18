@@ -1,54 +1,72 @@
-"""Figure 1: commitment maturity and recovery maturity as functions of training step."""
+"""Figure 1: what actually happens to commitment and to residual burden.
+
+Deliberately plots the raw quantities rather than a rescaled "maturity". R = B/C
+is a ratio whose denominator is ~0 before commitment exists, so any min-max
+normalisation of R is dominated by that degenerate region and would suggest a
+recovery trajectory that is not there.
+"""
 import os, sys
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from analyze import ROOT, STEPS, SG_SUITES, seed_trajectory
 import pandas as pd
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from analyze import ROOT, STEPS, SG_SUITES
+from dynamics import build_arrays, observed
+
 SUITE_LABEL = {"npz_ambig": "NP/Z", "mvrr": "MV/RR"}
+BLUE, RED = "#1f77b4", "#d62728"
 
 
-def maturity_curves(items, suite, mode="full"):
-    seeds = sorted(items.seed.unique())
-    Cm, Rm = [], []
-    for sd in seeds:
-        tr = seed_trajectory(items, sd, suite, mode, do_ci=False)
-        C, B = tr["C"], tr["B"]
-        c_late = tr["C_late"]
-        cm = [C.get(s, np.nan) / c_late if c_late else np.nan for s in STEPS]
-        # recovery maturity: 1 - R/R_max, using the same normalisation for all seeds
-        R = {s: (B[s] / C[s] if (s in C and C[s] > 0 and np.isfinite(B.get(s, np.nan)))
-                 else np.nan) for s in STEPS if s in C}
-        vals = np.array([R.get(s, np.nan) for s in STEPS], float)
-        hi = np.nanmax(vals) if np.any(np.isfinite(vals)) else np.nan
-        lo = np.nanmin(vals) if np.any(np.isfinite(vals)) else np.nan
-        rm = (hi - vals) / (hi - lo) if np.isfinite(hi) and hi > lo else vals * np.nan
-        Cm.append(cm); Rm.append(rm)
-    return np.array(Cm, float), np.array(Rm, float)
+def panel(ax, x, arr, color, label):
+    med = np.nanmedian(arr, axis=0)
+    lo = np.nanpercentile(arr, 10, axis=0)
+    hi = np.nanpercentile(arr, 90, axis=0)
+    ax.plot(x, med, "-o", color=color, ms=4, label=label)
+    ax.fill_between(x, lo, hi, color=color, alpha=0.18, lw=0)
 
 
 def main():
     items = pd.read_parquet(os.path.join(ROOT, "results", "item_effects.parquet"))
-    fig, axes = plt.subplots(1, len(SG_SUITES), figsize=(11, 4), sharey=True)
-    for ax, suite in zip(np.atleast_1d(axes), SG_SUITES):
-        Cm, Rm = maturity_curves(items, suite)
-        x = np.array(STEPS, float)
-        for arr, col, lab in [(Cm, "#1f77b4", "commitment maturity"),
-                              (Rm, "#d62728", "recovery maturity")]:
-            m = np.nanmedian(arr, axis=0)
-            lo = np.nanpercentile(arr, 25, axis=0)
-            hi = np.nanpercentile(arr, 75, axis=0)
-            ax.plot(x, m, "-o", color=col, ms=4, label=lab)
-            ax.fill_between(x, lo, hi, color=col, alpha=0.18, lw=0)
-        ax.set_xscale("log"); ax.axhline(0.5, color="gray", lw=.7, ls=":")
-        ax.set_title(SUITE_LABEL[suite]); ax.set_xlabel("training step")
-        ax.grid(alpha=.25)
-    np.atleast_1d(axes)[0].set_ylabel("maturity (fraction of final)")
-    np.atleast_1d(axes)[0].legend(frameon=False, fontsize=9)
+    x = np.array(STEPS, float)
+    fig, axes = plt.subplots(2, len(SG_SUITES), figsize=(11, 6.4), sharex=True)
+
+    for col, suite in enumerate(SG_SUITES):
+        seeds, itemlist, C, B = build_arrays(items, suite, "full")
+        obs = observed(C, B)
+        c = np.nanmean(C, axis=2)
+        with np.errstate(invalid="ignore"):
+            b = np.nanmean(B, axis=2)
+        tc = np.nanmedian(obs.T_commit.values.astype(float))
+
+        ax = axes[0, col]
+        panel(ax, x, c, BLUE, "commitment $C$")
+        panel(ax, x, b, RED, "residual burden $B$")
+        ax.set_xscale("log"); ax.set_yscale("symlog", linthresh=0.1)
+        ax.axvline(tc, color="k", lw=.8, ls="--")
+        ax.annotate("median $T_{commit}$", (tc, ax.get_ylim()[1]), fontsize=8,
+                    ha="right", va="top", rotation=90, xytext=(-3, -4),
+                    textcoords="offset points")
+        ax.set_title(SUITE_LABEL[suite]); ax.grid(alpha=.25)
+        ax.legend(frameon=False, fontsize=9, loc="upper left")
+        if col == 0:
+            ax.set_ylabel("bits (symlog)")
+
+        # R only where commitment exists; before that the ratio is meaningless
+        R = np.where(c > 0.5, b / np.maximum(c, 1e-9), np.nan)
+        ax = axes[1, col]
+        panel(ax, x, R, "#6a3d9a", "$R = B/C$")
+        ax.set_xscale("log"); ax.set_ylim(0, None)
+        ax.axvline(tc, color="k", lw=.8, ls="--")
+        ax.set_xlabel("training step"); ax.grid(alpha=.25)
+        ax.legend(frameon=False, fontsize=9)
+        if col == 0:
+            ax.set_ylabel("residual burden / initial disruption")
+
+    fig.suptitle("Commitment grows; the residual burden it leaves behind does not shrink",
+                 fontsize=11)
     fig.tight_layout()
     out = os.path.join(ROOT, "figures", "fig1_commitment_vs_recovery.png")
     fig.savefig(out, dpi=170)
