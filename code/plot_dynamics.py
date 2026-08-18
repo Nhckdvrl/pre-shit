@@ -14,7 +14,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from analyze import ROOT, STEPS, SG_SUITES
-from dynamics import build_arrays, observed
+from dynamics import build_arrays, burden, observed
 
 SUITE_LABEL = {"npz_ambig": "NP/Z", "mvrr": "MV/RR"}
 BLUE, RED = "#1f77b4", "#d62728"
@@ -34,11 +34,10 @@ def main():
     fig, axes = plt.subplots(2, len(SG_SUITES), figsize=(11, 6.4), sharex=True)
 
     for col, suite in enumerate(SG_SUITES):
-        seeds, itemlist, C, B = build_arrays(items, suite, "full")
-        obs = observed(C, B)
+        seeds, itemlist, C, G = build_arrays(items, suite, "full")
+        obs = observed(C, G)
         c = np.nanmean(C, axis=2)
-        with np.errstate(invalid="ignore"):
-            b = np.nanmean(B, axis=2)
+        b = np.array([burden(G[s]) for s in range(len(seeds))])
         tc = np.nanmedian(obs.T_commit.values.astype(float))
 
         ax = axes[0, col]
@@ -65,8 +64,9 @@ def main():
         if col == 0:
             ax.set_ylabel("residual burden / initial disruption")
 
-    fig.suptitle("Commitment grows; the residual burden it leaves behind does not shrink",
-                 fontsize=11)
+    fig.suptitle("Commitment grows; the residual burden it leaves behind does not shrink\n"
+                 "(burden rectified at the population level, as PREREG.md specifies)",
+                 fontsize=10)
     fig.tight_layout()
     out = os.path.join(ROOT, "figures", "fig1_commitment_vs_recovery.png")
     fig.savefig(out, dpi=170)

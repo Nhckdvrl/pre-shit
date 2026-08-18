@@ -3,6 +3,17 @@
 **Date:** 2026-08-19. **Decision:** stop. Phases 2 and 3 are not run, and no
 interpretability work follows.
 
+> **This verdict was re-derived after an independent review found four
+> implementation defects in the Phase 1 metric** — most importantly that the
+> post-disambiguation burden was rectified per item rather than at the population
+> level, inflating it 3.4–3.8x and giving it a mechanism to track `C` through
+> variance alone. All four are fixed (`DEVIATIONS.md` D8–D11), and the trajectory
+> was re-run from the stored surprisals under five burden definitions and on the
+> strict 3-word subset: `docs/AUDIT_PHASE1.md`. **The verdict is unchanged, and
+> under the corrected metric the result is more negative, not less** — `R` rises
+> slightly over training instead of staying flat. The numbers below are the
+> corrected ones.
+
 ## The question
 
 > Does susceptibility to a garden path emerge *before* the ability to recover
@@ -24,9 +35,9 @@ pretraining.
 |---|---|---|
 | K0 — the effect exists | **PASS** | seed 0: C = 6.17 bits (NP/Z), 3.28 bits (MV/RR) |
 | K1 — stable across seeds | **PASS** | 10/10 seeds on all four stimulus sets |
-| K2 — recovery improves >=30% | **FAIL** | median improvement **-13.6%** (NP/Z), **-8.6%** (MV/RR); both CIs span 0 |
-| K3 — median D >= 1 | *void* | defined in only 43% / 72.5% of bootstrap draws; conditional on the minority of resamples where a recovery time existed at all |
-| K4 — >=8/10 seeds with T_recover > T_commit | **FAIL** | **0/10** (NP/Z), **1/10** (MV/RR) |
+| K2 — recovery improves >=30% | **FAIL** | median improvement **-28.5%** (NP/Z), **-14.8%** (MV/RR); both CIs span 0 |
+| K3 — median D >= 1 | *void* | defined in only 68% / 78% of bootstrap draws; conditional on the resamples where a recovery time existed at all |
+| K4 — >=8/10 seeds with T_recover > T_commit | **FAIL** | **0/10** (NP/Z), **3/10** (MV/RR); best case across all five burden variants is 4/10 |
 | K5 — both constructions clear K2-K4 | **FAIL** | — |
 
 K3's nominal "PASS" is an artifact and is reported as void. `D` is only defined
@@ -42,27 +53,45 @@ about 3% of the way through pretraining, ~8B tokens. Nine of ten seeds land on
 2,000 or 4,000. Whatever produces garden-path susceptibility is in place very
 early and is nearly seed-invariant.
 
-**2. The residual burden grows in lockstep with the disruption.** Over NP/Z,
-`C` goes 0.49 → 6.29 bits between steps 1k and 143k while `B` goes 0.10 → 0.47.
-Both rise by roughly the same factor. The model does not learn to stop paying
-the post-disambiguation cost; it pays a proportionally identical cost throughout.
+**2. The residual burden grows at least as fast as the disruption.** Over NP/Z,
+`C` goes 0.49 → 6.29 bits between steps 1k and 143k while the population-rectified
+`B` goes 0.02 → 0.15. The model does not learn to stop paying the
+post-disambiguation cost.
 
-**3. `R = B/C` is flat.** NP/Z sits at 0.06–0.07 from step 2,000 onward; MV/RR at
-0.10–0.13. If anything both drift slightly *upward*, which is why the median
-"improvement" is negative. There is no interval in which recovery matures.
+**3. `R = B/C` does not fall — it rises.** NP/Z goes 0.018 at step 2,000 to 0.023
+at 143,000; MV/RR 0.040 to 0.043, peaking at 0.072 mid-training. Median
+"improvement" is **-28.5%** (NP/Z) and **-14.8%** (MV/RR). There is no interval in
+which recovery matures, under any of the five burden definitions tested.
 
 ## Is the null informative?
 
-Yes — the measure has range, and this was checked before drawing the conclusion.
-At the final checkpoint the spillover interaction at the first post-disambiguator
-word is reliably positive (NP/Z 0.26 bits, MV/RR 0.23 bits, both with CIs
-excluding 0). Models genuinely do carry a garden-path cost past the
-disambiguator. That cost is simply a small, and developmentally constant,
-fraction of the disruption at the disambiguator itself.
+Partly, and this is the honest limit of the study. Under a **crossed seed x item
+bootstrap** — not the pooled one Phase 1 first used — the spillover at the first
+post-disambiguator word stays positive on both constructions (NP/Z 0.26 bits,
+CI [0.04, 0.49]; MV/RR 0.23, CI [0.07, 0.42]), but only narrowly, and later
+positions do not survive consistently (NP/Z `G3` no longer clears 0).
 
-So the null is not "we could not measure recovery". It is "recovery, as behaviour
-after the disambiguator, is already as good as it will ever get by the time
-susceptibility appears."
+So the measure is not degenerate, but it is weak: a fraction of a bit of signal
+against a disruption of several bits. Two readings are compatible with the data,
+and the study cannot separate them:
+
+* recovery behaviour is already mature when susceptibility appears; or
+* post-disambiguator surprisal spillover is too weak an observable to track
+  recovery at all.
+
+Either way the pre-registered question cannot be answered in the affirmative from
+these data, and the second reading is a reason to distrust the observable rather
+than to keep hunting with it.
+
+## What `C` and `R` are, and are not
+
+`C` is a garden-path **surprisal interaction** — an online processing disruption.
+It is not evidence that the model built a specific wrong parse. `R` is
+**post-disambiguation surprisal spillover**, not a measure of whether a wrong
+parse was replaced by a right one. The original question ("when does the model
+learn to overturn its initial syntactic interpretation") is one step stronger
+than these observables can support, and the write-up should not be read as
+answering it directly.
 
 ## Why this kills the framing rather than just the result
 

@@ -11,7 +11,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from analyze import (ROOT, STEPS, LATE_STEPS, SG_SUITES, EXT_SUITES,
                      load_surprisals, item_effects, paired_bootstrap_mean,
                      RECOVERY_IMPROVEMENT_MIN)
-from dynamics import build_arrays, observed, hierarchical_bootstrap
+from dynamics import (build_arrays, burden, observed, ci_gate,
+                      hierarchical_bootstrap, crossed_bootstrap_mean)
 
 SUITE_LABEL = {"npz_ambig": "NP/Z", "mvrr": "MV/RR",
                "Christianson_2001": "Christianson 2001",
@@ -101,10 +102,9 @@ def fmt_step(x):
 
 def curve_table(items, suite, mode="full"):
     """Median across seeds of C, B and R at every analysis checkpoint."""
-    seeds, itemlist, C, B = build_arrays(items, suite, mode)
+    seeds, itemlist, C, G = build_arrays(items, suite, mode)
     c = np.nanmean(C, axis=2)                     # [seed, step]
-    with np.errstate(invalid="ignore"):
-        b = np.nanmean(B, axis=2)
+    b = np.array([burden(G[s]) for s in range(len(seeds))])
     r = np.where(c > 0, b / c, np.nan)
     lines = ["| step | C (bits) | B (bits) | R = B/C |", "|---|---|---|---|"]
     for i, st in enumerate(STEPS):
@@ -120,35 +120,37 @@ def phase1(items, n_boot=10000):
     A("Pythia-410M, 10 independent training runs, 12 pre-registered analysis "
       "checkpoints (`step0` scored for sanity only, excluded here).\n")
     A("`C` is the commitment interaction at the disambiguator. `B = mean_k max(G_k, 0)` "
-      "is the residual burden over the post-disambiguation window, using the identical "
-      "2x2 interaction. `R = B/C` is what a mature reanalyser drives toward 0: it is "
+      "is the residual burden over the post-disambiguation window, with G_k the "
+      "*population* interaction at post-disambiguator word k, rectified after averaging "
+      "over items as PREREG.md specifies. `R = B/C` is what a mature reanalyser drives toward 0: it is "
       "large when a garden path keeps costing surprisal after the evidence has arrived.\n")
 
     A("\n## Does the recovery window have any dynamic range?\n")
     A("A null recovery result is only informative if post-disambiguator spillover is "
-      "measurable in the first place. Per-position interaction at `step143000`, pooled "
-      "over seeds, item-level bootstrap (`*` = 95% CI excludes 0):\n")
+      "measurable in the first place. Per-position interaction at `step143000`, "
+      "**crossed seed x item bootstrap** (`*` = 95% CI excludes 0):\n")
     A("| suite | C | G1 | G2 | G3 |")
     A("|---|---|---|---|---|")
     for suite in SG_SUITES:
         sub = items[(items.suite == suite) & (items["mode"] == "full") & (items.step == 143000)]
         cells = []
         for col in ["C", "G1", "G2", "G3"]:
-            v = sub[col].dropna().values
-            m, lo, hi = paired_bootstrap_mean(v, 5000)
+            v = sub[col].values.astype(float)
+            m, lo, hi = crossed_bootstrap_mean(v, sub.seed.values, None, n=4000)
             cells.append(f"{m:.2f}{'*' if lo > 0 else ''}")
         A(f"| {SUITE_LABEL[suite]} | " + " | ".join(cells) + " |")
     A("")
-    A("Spillover at the first post-disambiguator word is real and reliably positive, "
-      "but it is only a few percent of the disruption at the disambiguator itself. "
-      "The measure is not degenerate: it has range, and the range is small.\n")
+    A("Spillover at the first post-disambiguator word survives a crossed seed x item "
+      "bootstrap on both constructions, but only just, and later positions do not "
+      "survive consistently. The measure is not degenerate, but it is weak: the "
+      "signal it carries is a fraction of a bit against a disruption of several bits.\n")
 
     verdict = {}
     for suite in SG_SUITES:
-        seeds, itemlist, C, B = build_arrays(items, suite, "full")
-        obs = observed(C, B)
+        seeds, itemlist, C, G = build_arrays(items, suite, "full")
+        obs = observed(C, G)                      # rect_pop + CI gate + fixed sustain
         obs["seed"] = [seeds[i] for i in obs.seed_index]
-        boot = hierarchical_bootstrap(C, B, n_boot=n_boot)
+        boot = hierarchical_bootstrap(C, G, n_boot=n_boot)
         A(f"\n## {SUITE_LABEL[suite]} (`{suite}`, {len(itemlist)} items, {len(seeds)} seeds)\n")
         A("### Median curves across seeds\n")
         A(curve_table(items, suite) + "\n")

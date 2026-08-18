@@ -70,6 +70,15 @@ the 3-checkpoint sustain rule, are unchanged). The outer resampling already
 carries the sampling uncertainty that the inner interval would express, so this
 is a computational simplification, not a loosening of the gate.
 
+> **Correction, 2026-08-19.** As originally written this entry was false. The
+> Phase 1 report path (`report.py` -> `dynamics.observed` -> `times_from_curves`)
+> never called the CI gate on real data either; the correct implementation existed
+> in `analyze.seed_trajectory` but was not the one the report used. Fixed in
+> `dynamics.ci_gate`, now applied on real data as this entry always claimed. The
+> corrected `T_commit` is unchanged at a median of 4,000 steps on both suites,
+> so the defect did not affect any conclusion — but the document asserted a
+> property the code did not have, which is worse than a wrong number.
+
 ## D7 — reporting a checkpoint grid, not a continuous time
 
 `T_commit` and `T_recover` can only take values on the 12-checkpoint grid, which
@@ -77,3 +86,50 @@ is roughly geometric. `D = log2(T_recover/T_commit)` is therefore coarse: the
 smallest non-zero `D` that the grid can express in the dense region is about 1.
 This is the reason Phase 3 exists, and it means K3's threshold of `D >= 1` is
 the smallest resolvable separation rather than a large effect.
+
+
+## D8 — the burden was rectified at the wrong level (found on review, after Phase 1)
+
+`PREREG.md` defines
+
+    B(t) = mean_k max(G_k(t), 0)
+
+where `G_k(t)` is the **population** interaction at post-disambiguator word `k`:
+it is a function of the checkpoint, not of the item. The Phase 1 implementation
+instead rectified per item and then averaged:
+
+    B = mean_i mean_k max(G_ki, 0)          # what was computed
+    B = mean_k max(mean_i G_ki, 0)          # what PREREG.md specifies
+
+Rectifying inside the item loop makes `B` strictly positive whenever item-level
+interactions are merely noisy, and — the serious risk — lets `B` track `C`
+through item-level *variance* alone, which would manufacture the flat `R = B/C`
+that Phase 1 reported. Measured inflation at `step143000` was **3.8x** (NP/Z) and
+**3.4x** (MV/RR) relative to the signed population mean.
+
+**Decision.** Fixed to the pre-registered population-level form, and the audit in
+`docs/AUDIT_PHASE1.md` re-runs the trajectory under five burden definitions
+(`rect_pop`, `rect_item`, `signed`, `auc`, `g1`) and on the strict 3-word subset,
+so that the conclusion can be checked against the choice rather than resting on
+it. The verdict is unchanged under every variant.
+
+## D9 — sustain rule at the tail of the grid
+
+`_first_sustained` clipped its window at the end of the array, so the last
+checkpoint needed one `True` to count as "sustained over 3". Fixed to require a
+full 3-long window, which means the final two checkpoints can no longer be
+acquisition times. `T_commit` is unaffected; this only ever mattered for late
+`T_recover`.
+
+## D10 — per-position significance used a pooled bootstrap
+
+The Phase 1 "does the measure have range" check bootstrapped 10 seeds x 24 items
+as one flat item-level sample — the pseudo-replication `PREREG.md` explicitly
+forbids. Replaced with a crossed seed x item bootstrap
+(`dynamics.crossed_bootstrap_mean`). `G1` remains positive on both constructions
+under the correct interval, but more narrowly, and NP/Z's `G3` no longer clears 0.
+
+## D11 — strict 3-word robustness check, promised in D1
+
+D1 promised the strict 3-word subset as a robustness check and Phase 1 did not
+report it. It is now in `docs/AUDIT_PHASE1.md` (NP/Z 12 items, MV/RR 23 items).
