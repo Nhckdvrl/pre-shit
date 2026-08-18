@@ -55,9 +55,10 @@ See `docs/` — one report per gate, written as each gate is reached.
 ## What is and is not in this repository
 
 Everything needed to rerun the study is here: the protocol, all analysis and
-scoring code, the sanity checks, the per-checkpoint surprisal tables, the raw run
-logs and the reports. Two things are deliberately absent, both fetched by script:
+scoring code, the sanity checks, the per-checkpoint surprisal tables and the
+reports. Deliberately absent:
 
 * **Model weights** (`models/hf_cache/`, ~190 GB) — see `models/README.md`.
 * **Stimuli** (`data/`) — third-party sets, not redistributed here. Run
   `code/fetch_data.sh`, which pulls each from its original source.
+* **Run logs** (`logs/`) — download progress bars, nothing the results depend on.

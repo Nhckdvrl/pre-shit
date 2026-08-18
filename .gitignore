@@ -9,6 +9,9 @@ models/hf_cache/
 # Third-party stimuli: fetched at run time, not redistributed here.
 data/
 
+# Run logs: download progress bars, no evidential value.
+logs/
+
 *.tmp*
 __pycache__/
 *.pyc
