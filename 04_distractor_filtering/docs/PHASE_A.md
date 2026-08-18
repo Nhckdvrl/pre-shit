@@ -95,6 +95,12 @@ null here, because `D*` is mechanically bounded by `M_base` — you cannot lose 
 margin than you have — so the null prediction is a flat line, and both positions
 fall below it. **PASS**, more strongly at `before`.
 
+> **Retracted.** The claim that "a constant ratio is the null here" is wrong. A
+> single checkpoint-independent line `D* = a + b*M_base` with a large intercept
+> and slope well below 1 forces the ratio to fall as `M_base` grows, and predicts
+> the observed ratios almost exactly. At matched `M_base`, `D*` is flat. See
+> `MATCHED_MBASE.md`. **K4 fails; K1-K3 are unaffected.**
+
 ## What this says, stated no more strongly than the data allow
 
 `D*` **grows in absolute terms throughout training**. The model does not become

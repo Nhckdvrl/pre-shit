@@ -29,9 +29,14 @@ overwrote the queried key" when it differed in four ways.
 
 3. **Never write "differs only in X"** unless that table exists and is in the repo.
 
-4. **Ask what the metric returns under the null.** Any rectification, `max`,
-   ratio or normalisation gets an explicit answer to "what does this produce when
-   there is no effect?" before it is used. `max(G,0)` and `B/C` both failed this.
+4. **Ask what the metric returns under the null — including derived quantities.**
+   Any rectification, `max`, ratio or normalisation gets an explicit answer to
+   "what does this produce when there is no effect?" before it is used.
+   `max(G,0)` and `B/C` both failed this. Topic 04 failed it a second way: the
+   null was correctly stated for `D*` and then never asked of `D*/M_base`, the
+   ratio the claim actually rested on. A large intercept and a sub-unit slope
+   make a falling ratio the *null*, not the effect. Every quantity a claim rests
+   on, including ones formed downstream, needs its null stated before use.
 
 5. **Track the control's own trajectory, not just the difference.** In 03 the
    difference grew entirely because the control improved. A contrast whose two

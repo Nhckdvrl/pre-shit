@@ -13,7 +13,7 @@ deleted — a killed topic with a clean audit trail is a result.
 | [01](01_garden_path/) | garden-path reanalysis | does susceptibility to a garden path emerge before recovery from it? | **killed** at Phase 1 |
 | [02](02_contextual_entrainment/) | contextual entrainment | when do mechanical copying and semantic filtering diverge? | **killed** at Phase A |
 | [03](03_entity_state_update/) | entity state update | do binding the current state and suppressing obsolete states develop together? | **claim retracted** — the effect was a property of the control |
-| [04](04_distractor_filtering/) | distractor filtering | does using relevant context emerge together with rejecting semantically competing context? | **alive** — K1–K4 passed |
+| [04](04_distractor_filtering/) | distractor filtering | does using relevant context emerge together with rejecting semantically competing context? | **K1–K3 pass, K4 retracted** — mature-model effect is real; no developmental dissociation |
 
 ## Shared infrastructure
 

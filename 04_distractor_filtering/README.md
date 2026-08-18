@@ -1,6 +1,7 @@
 # 04 — Context use vs. semantic distractor filtering
 
-**Status: all four gates passed. The one topic here still standing.**
+**Status: K1-K3 pass; K4 retracted.** The final-model phenomenon is solid; the
+developmental claim is not.
 
 > During natural pretraining, does the ability to exploit relevant context emerge
 > together with the ability to reject semantically competing context?
@@ -21,18 +22,19 @@ copying that sank topic 02.
 
 **K3** Present at both distractor positions; position modulates size, not existence.
 
-**K4** From step 4,000 on, context use grows **x2.22** while the `before`
-distractor cost grows **x1.12**. Relative vulnerability falls from 0.89 to 0.45.
-The pre-registered confound — the model's own knowledge of the decoy relation —
-is dispatched at the item level: **94%** of the trajectory survives controlling
-for it.
+**K4 — FAILS.** Raw `D*` grows with training and the ratio `D*/M_base` falls from
+0.89 to 0.45, which looked like filtering arriving later than context use. It is
+not. `D*` is mechanically coupled to `M_base`, and a single checkpoint-independent
+line `D* = 1.64 + 0.22 * M_base` reproduces the entire ratio decline with **no step
+term at all**. At matched `M_base`, `D*` changes by -12% (before, CIs overlapping)
+and +7% (after). There is no filtering trajectory.
 
-The claim, stated no more strongly than the data allow: **the two abilities emerge
-in the same window and then part company, because context use keeps developing
-and the distractor cost does not.** `D*` still grows in absolute terms; the model
-never becomes less vulnerable, only relatively so.
+The pre-registered `A_decoy` confound *was* dispatched properly (94% of the step
+effect survives it at the item level). The confound that killed K4 is one I
+introduced myself, in the ratio used to test it.
 
-Full numbers and the remaining caveat: `docs/PHASE_A.md`. Protocol: `PREREG.md`.
+`docs/MATCHED_MBASE.md` is the decisive analysis. `docs/PHASE_A.md` holds the
+gate reports, with the K4 section retracted in place. Protocol: `PREREG.md`.
 
 ```bash
 ./code/fetch_data.sh
