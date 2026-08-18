@@ -56,3 +56,24 @@ Surprisal is reported in **bits** (log base 2), and `<|endoftext|>` is prepended
 as context so that the first word of every sentence is scorable. Models are run
 in float32 rather than bfloat16, because the effects of interest are of the order
 of a few bits and bf16 rounding is not obviously negligible at that scale.
+
+## D6 — the commitment gate inside the hierarchical bootstrap
+
+The commitment gate requires the item-level paired-bootstrap CI of `C` to exclude
+0. Evaluating that *inside* each of the 10,000 hierarchical draws would mean a
+nested bootstrap (10,000 x 10 seeds x an inner resample per checkpoint).
+
+**Decision.** On the real data the gate is applied exactly as pre-registered,
+including the nested CI. Inside the hierarchical bootstrap the criterion is
+reduced to its point form `C > 0` (the other two clauses, `C >= 0.5*C_late` and
+the 3-checkpoint sustain rule, are unchanged). The outer resampling already
+carries the sampling uncertainty that the inner interval would express, so this
+is a computational simplification, not a loosening of the gate.
+
+## D7 — reporting a checkpoint grid, not a continuous time
+
+`T_commit` and `T_recover` can only take values on the 12-checkpoint grid, which
+is roughly geometric. `D = log2(T_recover/T_commit)` is therefore coarse: the
+smallest non-zero `D` that the grid can express in the dense region is about 1.
+This is the reason Phase 3 exists, and it means K3's threshold of `D >= 1` is
+the smallest resolvable separation rather than a large effect.

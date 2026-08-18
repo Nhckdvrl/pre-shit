@@ -8,8 +8,10 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from analyze import (ROOT, STEPS, SG_SUITES, EXT_SUITES, load_surprisals,
-                     item_effects, paired_bootstrap_mean)
+from analyze import (ROOT, STEPS, LATE_STEPS, SG_SUITES, EXT_SUITES,
+                     load_surprisals, item_effects, paired_bootstrap_mean,
+                     RECOVERY_IMPROVEMENT_MIN)
+from dynamics import build_arrays, observed, hierarchical_bootstrap
 
 SUITE_LABEL = {"npz_ambig": "NP/Z", "mvrr": "MV/RR",
                "Christianson_2001": "Christianson 2001",
@@ -93,15 +95,113 @@ def phase0(items, step=143000):
     return "\n".join(L), k0, k1
 
 
+def fmt_step(x):
+    return "—" if not np.isfinite(x) else f"{int(x):,}"
+
+
+def curve_table(items, suite, mode="full"):
+    """Median across seeds of C, B and R at every analysis checkpoint."""
+    seeds, itemlist, C, B = build_arrays(items, suite, mode)
+    c = np.nanmean(C, axis=2)                     # [seed, step]
+    with np.errstate(invalid="ignore"):
+        b = np.nanmean(B, axis=2)
+    r = np.where(c > 0, b / c, np.nan)
+    lines = ["| step | C (bits) | B (bits) | R = B/C |", "|---|---|---|---|"]
+    for i, st in enumerate(STEPS):
+        lines.append(f"| {st:,} | {np.nanmedian(c[:, i]):.2f} | "
+                     f"{np.nanmedian(b[:, i]):.2f} | {np.nanmedian(r[:, i]):.3f} |")
+    return "\n".join(lines)
+
+
+def phase1(items, n_boot=10000):
+    L = []
+    A = L.append
+    A("# Gates K2-K5 - are commitment and recovery acquired at separable times?\n")
+    A("Pythia-410M, 10 independent training runs, 12 pre-registered analysis "
+      "checkpoints (`step0` scored for sanity only, excluded here).\n")
+    A("`C` is the commitment interaction at the disambiguator. `B = mean_k max(G_k, 0)` "
+      "is the residual burden over the post-disambiguation window, using the identical "
+      "2x2 interaction. `R = B/C` is what a mature reanalyser drives toward 0: it is "
+      "large when a garden path keeps costing surprisal after the evidence has arrived.\n")
+
+    verdict = {}
+    for suite in SG_SUITES:
+        seeds, itemlist, C, B = build_arrays(items, suite, "full")
+        obs = observed(C, B)
+        obs["seed"] = [seeds[i] for i in obs.seed_index]
+        boot = hierarchical_bootstrap(C, B, n_boot=n_boot)
+        A(f"\n## {SUITE_LABEL[suite]} (`{suite}`, {len(itemlist)} items, {len(seeds)} seeds)\n")
+        A("### Median curves across seeds\n")
+        A(curve_table(items, suite) + "\n")
+        A("\n### Per-seed acquisition times\n")
+        A("| seed | T_commit | T_recover | R_early | R_late | improvement | D = log2 ratio |")
+        A("|---|---|---|---|---|---|---|")
+        for _, r in obs.sort_values("seed").iterrows():
+            imp = "—" if not np.isfinite(r.improvement) else f"{r.improvement*100:.0f}%"
+            A(f"| {int(r.seed)} | {fmt_step(r.T_commit)} | {fmt_step(r.T_recover)} | "
+              f"{r.R_early:.3f} | {r.R_late:.3f} | {imp} | "
+              f"{'—' if not np.isfinite(r.D) else f'{r.D:.2f}'} |")
+        n_later = int(((obs.T_recover > obs.T_commit) & np.isfinite(obs.D)).sum())
+        n_imp = int((obs.improvement >= RECOVERY_IMPROVEMENT_MIN).sum())
+        A("")
+        A(f"Seeds with a >={RECOVERY_IMPROVEMENT_MIN*100:.0f}% recovery improvement: "
+          f"**{n_imp}/{len(obs)}**. Seeds with `T_recover > T_commit`: **{n_later}/{len(obs)}**.\n")
+        A("\n### Hierarchical bootstrap "
+          f"({n_boot:,} draws: resample seeds, then items within each resampled seed)\n")
+        A("| quantity | median | 95% CI |")
+        A("|---|---|---|")
+        for k, lab, f in [("improvement", "recovery improvement (early→late)", "{:.1%}"),
+                          ("D", "D = log2(T_recover / T_commit)", "{:.2f}"),
+                          ("T_commit", "T_commit (steps)", "{:,.0f}"),
+                          ("T_recover", "T_recover (steps)", "{:,.0f}")]:
+            m, lo, hi, frac = boot[k]
+            if not np.isfinite(m):
+                A(f"| {lab} | — | — |")
+            else:
+                A(f"| {lab} | {f.format(m)} | [{f.format(lo)}, {f.format(hi)}] |")
+        k2 = bool(np.isfinite(boot["improvement"][0])
+                  and boot["improvement"][0] >= RECOVERY_IMPROVEMENT_MIN
+                  and boot["improvement"][1] > 0)
+        k3 = bool(np.isfinite(boot["D"][0]) and boot["D"][0] >= 1 and boot["D"][1] > 0)
+        k4 = n_later >= 8
+        verdict[suite] = dict(k2=k2, k3=k3, k4=k4, boot=boot, obs=obs)
+        A("")
+        A(f"- **K2** (recovery improves >=30%, CI > 0): **{'PASS' if k2 else 'FAIL'}**")
+        A(f"- **K3** (median D >= 1, CI > 0): **{'PASS' if k3 else 'FAIL'}**")
+        A(f"- **K4** (>=8/10 seeds with T_recover > T_commit): **{'PASS' if k4 else 'FAIL'}**")
+
+    k5 = all(v["k2"] and v["k3"] and v["k4"] for v in verdict.values())
+    A("\n## Verdict\n")
+    for suite, v in verdict.items():
+        A(f"- {SUITE_LABEL[suite]}: K2 {'PASS' if v['k2'] else 'FAIL'}, "
+          f"K3 {'PASS' if v['k3'] else 'FAIL'}, K4 {'PASS' if v['k4'] else 'FAIL'}")
+    A(f"- **K5** (both constructions clear K2-K4): **{'PASS' if k5 else 'FAIL'}**\n")
+    if not k5:
+        A("Under the pre-registration this is where the developmental-dissociation "
+          "story stops. The failing gate is reported as-is; no control is added to "
+          "rescue it, and no interpretability work follows.")
+    else:
+        A("Proceed to Phase 2: the local-4-word baseline (K7) and the two external "
+          "stimulus sets (K6).")
+    return "\n".join(L), k5
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--phase", default="0")
+    ap.add_argument("--n-boot", type=int, default=10000)
     args = ap.parse_args()
     items = item_effects(load_surprisals(os.path.join(ROOT, "results", "surprisals")))
     items.to_parquet(os.path.join(ROOT, "results", "item_effects.parquet"), index=False)
     if args.phase == "0":
         text, k0, k1 = phase0(items)
         path = os.path.join(ROOT, "docs", "PHASE0_K0_K1.md")
+        open(path, "w").write(text + "\n")
+        print(text)
+        print("\nwrote", path)
+    elif args.phase == "1":
+        text, k5 = phase1(items, n_boot=args.n_boot)
+        path = os.path.join(ROOT, "docs", "PHASE1_K2_K5.md")
         open(path, "w").write(text + "\n")
         print(text)
         print("\nwrote", path)
