@@ -11,8 +11,9 @@ Two context modes are always produced:
 import argparse, json, math, os, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO = os.path.dirname(ROOT)          # weights are shared across topics
 # Must precede the transformers import: the cache root is read at import time.
-os.environ.setdefault("HF_HOME", os.path.join(ROOT, "models", "hf_cache"))
+os.environ.setdefault("HF_HOME", os.path.join(REPO, "models", "hf_cache"))
 os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")
 
 import torch

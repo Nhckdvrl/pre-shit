@@ -1,0 +1,17 @@
+# .gitignore does not support inline comments -- keep patterns on their own lines.
+
+# virtualenv (~7 GB)
+env/
+
+# Pythia / PolyPythia checkpoint weights (~190 GB)
+models/hf_cache/
+
+# Third-party stimuli: fetched at run time, not redistributed here.
+data/
+
+# Run logs: download progress bars, no evidential value.
+logs/
+
+*.tmp*
+__pycache__/
+*.pyc
