@@ -81,6 +81,7 @@ def item_effects(df):
                     rec[f"G{k+1}"] = diff(posc[k]) if k < rec["K"] else np.nan
                 out.append(rec)
     t = pd.DataFrame(out)
+    t["item"] = t["item"].astype(str)   # SyntaxGym ints and external pair keys coexist
     gg = t[["G1", "G2", "G3"]].clip(lower=0)
     t["B"] = gg.mean(axis=1, skipna=True)
     return t

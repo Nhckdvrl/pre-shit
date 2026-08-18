@@ -13,6 +13,7 @@ import argparse, json, math, os, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Must precede the transformers import: the cache root is read at import time.
 os.environ.setdefault("HF_HOME", os.path.join(ROOT, "models", "hf_cache"))
+os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")
 
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
