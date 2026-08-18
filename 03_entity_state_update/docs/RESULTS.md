@@ -1,3 +1,8 @@
+> **Superseded in its central claim.** Everything below is measured against the
+> *category* control. The entity-matched control in `ENTITY_CONTROL.md` shows the
+> PI cost reported here is a property of that control, not an overwrite-specific
+> effect. The numbers are correct; the interpretation is retracted.
+
 # Entity state update — binding is learned early, interference is learned late
 
 Pythia-410M, 10 independent pretraining runs, 12 checkpoints, 920 trials over 46 categories. All intervals are crossed seed x trial bootstraps.
@@ -42,7 +47,7 @@ Binding reaches 95% of its final value by **step 2,000** and is flat thereafter.
 
 ## Why this is not just 'longer context is harder'
 
-The control has the same number of sentences, the same number of previously mentioned values, and the queried binding in the same (final) position. It differs only in whether those earlier mentions bound the queried key. Over training the two move in **opposite directions**:
+The control has the same number of sentences, the same number of previously mentioned values, and the queried binding in the same (final) position. Over training the two move in **opposite directions**:
 
 - `control_3` improves from 0.191 to 0.654
 - `update_3` **declines** from its peak 0.451 (step 4,000) to 0.333

@@ -73,10 +73,11 @@ def main():
     ap.add_argument("--device", default="cuda:0")
     ap.add_argument("--batch-size", type=int, default=64)
     ap.add_argument("--out", default=os.path.join(ROOT, "results", "scores"))
+    ap.add_argument("--stimuli", default="stimuli.jsonl")
     args = ap.parse_args()
 
     stim = [json.loads(l) for l in
-            open(os.path.join(ROOT, "data", "processed", "stimuli.jsonl"))]
+            open(os.path.join(ROOT, "data", "processed", args.stimuli))]
     os.makedirs(args.out, exist_ok=True)
     import pandas as pd
 

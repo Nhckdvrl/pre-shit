@@ -36,3 +36,28 @@ pre-registration expected interference to appear with the first overwrite. It do
 not. The finding is therefore about interference **accumulating** across multiple
 obsolete states, and the write-up says so rather than quoting only the 3-state
 number.
+
+
+## D5 — the category control was not sufficient, and the README overclaimed it
+
+An earlier version of `README.md` said the control differed from `update`
+"only in whether those mentions overwrote the queried key". That was false: it
+also changed the previous key, the semantic category of the previous values, the
+repetition count of the queried key, and the plausibility of the distractors for
+the query. The claim was corrected and then tested directly with the
+entity-matched control (`docs/ENTITY_CONTROL.md`), which showed the entire
+reported effect came from the control rather than from overwriting.
+
+## D6 — `control_distinct_e2` and `control_other_e2` are identical by construction
+
+At two states both controls reduce to a single earlier sentence about one other
+entity, so they coincide. Their accuracies are identical in every table, which is
+expected rather than a bug. The two controls only differ at three states.
+
+## D7 — the conservative direction of the remaining asymmetry
+
+In the entity-matched design the queried key appears three times in `update` and
+once in the controls. Repeating the key makes the query more predictable, which
+*helps* `update`, so a positive PI* would have been an underestimate. PI* came out
+at zero, so this does not rescue anything — but it does mean the null is not an
+artifact of the update condition being handicapped.

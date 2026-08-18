@@ -12,7 +12,7 @@ deleted — a killed topic with a clean audit trail is a result.
 |---|---|---|---|
 | [01](01_garden_path/) | garden-path reanalysis | does susceptibility to a garden path emerge before recovery from it? | **killed** at Phase 1 |
 | [02](02_contextual_entrainment/) | contextual entrainment | when do mechanical copying and semantic filtering diverge? | **killed** at Phase A |
-| [03](03_entity_state_update/) | entity state update | do binding the current state and suppressing obsolete states develop together? | **alive** — passed A, B, C |
+| [03](03_entity_state_update/) | entity state update | do binding the current state and suppressing obsolete states develop together? | **claim retracted** — the effect was a property of the control |
 
 ## Shared infrastructure
 
