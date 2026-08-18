@@ -47,3 +47,33 @@ overwrote the queried key" when it differed in four ways.
 
 7. **An effect that only exists against one control is not an effect.** Budget
    for two independent controls per claim from the start.
+
+## Rule 8 — a checkpoint must explain something competence cannot
+
+This rule exists because topics 01-04 died four different deaths that were all the
+same death: a "developmental dissociation" that turned out to be a function of one
+underlying quantity, with training step adding nothing.
+
+Before any dynamics claim, fit the **checkpoint-free null** first:
+
+    M0:  Y = f(X)
+
+where `X` contains every reasonable measure of overall competence, confidence and
+prerequisite ability that could drive `Y`. Then fit
+
+    M1:  Y = f(X, t)
+
+and compare them by **leave-one-checkpoint-out** cross-validation. `t` may be
+called a learning dynamic only if all of the following hold:
+
+* `M1` predicts a held-out checkpoint materially better than `M0`;
+* the improvement's bootstrap CI excludes 0;
+* at least 8/10 seeds agree in direction;
+* the effect is not an artifact of a ratio or normalisation (rule 4).
+
+Otherwise the honest statement is that the model is moving along a fixed
+competence manifold, and training stage is not doing explanatory work.
+
+Concretely, this would have killed topic 04 at Phase A instead of Phase C: a
+single line `D* = 1.64 + 0.22*M_base`, fitted with no step term, already reproduced
+the entire result.
