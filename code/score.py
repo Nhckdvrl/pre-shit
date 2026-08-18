@@ -154,7 +154,11 @@ def main():
                 continue
             print(f"[scoring] {repo} @ step{step}", flush=True)
             rows = run(repo, f"step{step}", stim, args.device, args.batch_size)
-            pd.DataFrame(to_records(rows, seed, step)).to_parquet(path, index=False)
+            # write-then-rename: several workers may share a seed list, and a
+            # torn parquet would be indistinguishable from a good one later
+            tmp = path + f".tmp{os.getpid()}"
+            pd.DataFrame(to_records(rows, seed, step)).to_parquet(tmp, index=False)
+            os.replace(tmp, path)
             print("  ->", path, flush=True)
 
 

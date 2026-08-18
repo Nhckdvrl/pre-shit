@@ -1,0 +1,4 @@
+gpu0 <- seeds 0,1,2 (pid 1001302)
+gpu1 <- seeds 3,4,5 (pid 1001303)
+gpu2 <- seeds 6,7 (pid 1001304)
+gpu3 <- seeds 8,9 (pid 1001305)

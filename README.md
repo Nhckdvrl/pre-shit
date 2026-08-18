@@ -16,9 +16,8 @@ pretraining. It does not assume the model maintains a single serial parse.
 PREREG.md          the locked protocol: metrics, acquisition-time rules, kill gates
 DEVIATIONS.md      forced design decisions the protocol did not anticipate
 code/              build_stimuli.py -> score.py -> analyze.py
-data/raw/          SyntaxGym npz_ambig + mvrr; Christianson 2001; Alternates 2022
-data/processed/    stimuli.jsonl (region-aligned, word-indexed)
-models/hf_cache/   all model weights (git-ignored)
+data/              stimuli, fetched by code/fetch_data.sh (not redistributed)
+models/hf_cache/   Pythia + PolyPythia weights, ~190 GB (not in git)
 results/           per-checkpoint word surprisals + derived item effects
 docs/              one report per kill gate
 figures/
@@ -41,8 +40,10 @@ intervals come from a hierarchical bootstrap over both.
 ## Reproducing
 
 ```bash
-uv venv env && VIRTUAL_ENV=env uv pip install torch transformers accelerate pandas pyarrow scipy matplotlib
+uv venv env && VIRTUAL_ENV=env uv pip install -r requirements.txt
+./code/fetch_data.sh
 ./env/bin/python code/build_stimuli.py
+./env/bin/python code/test_dynamics.py
 ./env/bin/python code/score.py --seeds 0,1,2,3,4,5,6,7,8,9 --steps 143000
 ./env/bin/python code/analyze.py --phase 0
 ```
@@ -50,3 +51,13 @@ uv venv env && VIRTUAL_ENV=env uv pip install torch transformers accelerate pand
 ## Status
 
 See `docs/` — one report per gate, written as each gate is reached.
+
+## What is and is not in this repository
+
+Everything needed to rerun the study is here: the protocol, all analysis and
+scoring code, the sanity checks, the per-checkpoint surprisal tables, the raw run
+logs and the reports. Two things are deliberately absent, both fetched by script:
+
+* **Model weights** (`models/hf_cache/`, ~190 GB) — see `models/README.md`.
+* **Stimuli** (`data/`) — third-party sets, not redistributed here. Run
+  `code/fetch_data.sh`, which pulls each from its original source.
